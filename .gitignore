@@ -1,0 +1,23 @@
+# Binaries
+/thailocate-server
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+
+# Go build/test artifacts
+*.out
+vendor/
+
+# Editor/OS
+.DS_Store
+.idea/
+.vscode/
+
+# Env / secrets
+.env
+.env.*
+*.local
