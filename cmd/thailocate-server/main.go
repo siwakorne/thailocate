@@ -68,6 +68,33 @@ func main() {
 		writeJSON(http.StatusOK, detail)
 	})
 
+	mux.HandleFunc("/v1/subdistricts-intersecting", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON := func(status int, body any) {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(status)
+			json.NewEncoder(w).Encode(body)
+		}
+
+		if r.Method != http.MethodPost {
+			writeJSON(http.StatusMethodNotAllowed, map[string]string{"error": "use POST with a GeoJSON geometry body"})
+			return
+		}
+
+		var geometry thailocate.Geometry
+		if err := json.NewDecoder(r.Body).Decode(&geometry); err != nil {
+			writeJSON(http.StatusBadRequest, map[string]string{"error": "invalid JSON body: " + err.Error()})
+			return
+		}
+
+		matches, err := loc.FindSubdistrictsIntersecting(geometry)
+		if err != nil {
+			writeJSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
+		}
+
+		writeJSON(http.StatusOK, matches)
+	})
+
 	srv := &http.Server{
 		Addr:         *addr,
 		Handler:      logRequests(mux),

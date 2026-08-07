@@ -30,4 +30,24 @@ func main() {
 		b, _ := json.MarshalIndent(detail, "", "  ")
 		fmt.Println(string(b))
 	}
+
+	// The inverse, many-to-many query: which subdistricts does an arbitrary
+	// polygon (e.g. a delivery zone) touch or overlap?
+	zone := thailocate.Geometry{
+		Type: "Polygon",
+		Coordinates: [][][2]float64{{ // GeoJSON ring: [lng, lat] pairs
+			{100.490, 13.720},
+			{100.540, 13.720},
+			{100.540, 13.755},
+			{100.490, 13.755},
+			{100.490, 13.720},
+		}},
+	}
+	matches, err := loc.FindSubdistrictsIntersecting(zone)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, m := range matches {
+		fmt.Println(m.DistrictEN, "-", m.SubdistrictEN)
+	}
 }

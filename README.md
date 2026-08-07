@@ -81,6 +81,45 @@ type LocationDetail struct {
 that's a normal result, not an error. An error is only returned for
 malformed input (e.g. lat/lng out of range).
 
+### Polygon → many subdistricts
+
+`GetLocationDetail` answers "which one subdistrict contains this point?".
+`FindSubdistrictsIntersecting` answers the inverse, many-to-many question:
+"which subdistricts does this polygon touch or overlap?" — useful for
+things like a delivery/shift zone that spans several tambon/khwaeng.
+
+```go
+matches, err := loc.FindSubdistrictsIntersecting(thailocate.Geometry{
+	Type: "Polygon",
+	Coordinates: [][][2]float64{{ // GeoJSON ring: [lng, lat] pairs
+		{100.490, 13.720},
+		{100.540, 13.720},
+		{100.540, 13.755},
+		{100.490, 13.755},
+		{100.490, 13.720},
+	}},
+})
+if err != nil {
+	log.Fatal(err)
+}
+for _, m := range matches {
+	fmt.Println(m.DistrictEN, m.SubdistrictEN)
+}
+```
+
+`Coordinates` also accepts `"MultiPolygon"` (`[][][][2]float64`), and either
+form also accepts the generic `[]any` nesting you get back from decoding
+arbitrary JSON/BSON into `any` (e.g. straight out of a MongoDB driver
+decode) — no need to re-type already-decoded geometry.
+
+The result is a `[]SubdistrictMatch` (same province/district/subdistrict
+fields as `LocationDetail`, minus the point-specific ones) and may be empty
+— not an error — if the polygon falls entirely outside Thailand. An error is
+only returned for malformed input (bad `Type`, empty or non-numeric
+coordinates). Intersection is tested against each subdistrict's outer
+boundary only; holes are not subtracted (subdistrict polygons in this
+dataset rarely have any).
+
 ## 2. Use it over a URL
 
 A small HTTP server ships in `cmd/thailocate-server`:
@@ -114,6 +153,32 @@ curl "http://localhost:8080/v1/locate?lat=13.7563&lng=100.5018"
 }
 ```
 
+The same polygon → many-subdistricts query is available as `POST
+/v1/subdistricts-intersecting`, body is a raw GeoJSON geometry object:
+
+```bash
+curl -X POST http://localhost:8080/v1/subdistricts-intersecting \
+  -d '{
+        "type": "Polygon",
+        "coordinates": [[[100.490,13.720],[100.540,13.720],[100.540,13.755],[100.490,13.755],[100.490,13.720]]]
+      }'
+```
+
+```json
+[
+  {
+    "province_en": "Bangkok", "province_th": "กรุงเทพมหานคร", "province_code": "TH10",
+    "district_en": "Bang Rak", "district_th": "บางรัก", "district_code": "TH1004", "district_type": "khet",
+    "subdistrict_en": "Si Lom", "subdistrict_th": "สีลม", "subdistrict_code": "TH100402", "subdistrict_type": "khwaeng"
+  },
+  { "...": "one entry per intersecting subdistrict" }
+]
+```
+
+`"type"` may also be `"MultiPolygon"`. An empty `[]` response means the
+polygon doesn't intersect any subdistrict (not an error); a `400` means the
+geometry itself was malformed.
+
 Change the listen address with `-addr`, e.g. `go run ./cmd/thailocate-server -addr :9090`.
 Build a standalone binary with `go build -o thailocate-server ./cmd/thailocate-server` —
 it's fully self-contained (data is embedded), so you can just copy the one
@@ -134,8 +199,9 @@ binary to a server and run it.
 ```
 thailocate/
 ├── go.mod
-├── locator.go            # public API: Locator, LocationDetail, New(), GetLocationDetail()
-├── geometry.go            # point-in-polygon + GeoJSON parsing (stdlib only)
+├── locator.go            # public API: Locator, LocationDetail, New(), GetLocationDetail(),
+│                         # SubdistrictMatch, FindSubdistrictsIntersecting()
+├── geometry.go            # point-in-polygon, polygon-intersects-polygon + GeoJSON parsing (stdlib only)
 ├── data/                  # embedded boundary polygons
 │   ├── province.geojson
 │   ├── amphoe.geojson

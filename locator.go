@@ -269,6 +269,70 @@ func (l *Locator) GetLocationDetail(lat, lng float64) (*LocationDetail, error) {
 	return detail, nil
 }
 
+// SubdistrictMatch is one administrative area (province/district/subdistrict)
+// returned by FindSubdistrictsIntersecting.
+type SubdistrictMatch struct {
+	ProvinceEN   string `json:"province_en"`
+	ProvinceTH   string `json:"province_th"`
+	ProvinceCode string `json:"province_code"`
+
+	// District is the อำเภอ (Amphoe) — or เขต (Khet) for the 50 districts
+	// of Bangkok. DistrictType tells you which term applies.
+	DistrictEN   string `json:"district_en"`
+	DistrictTH   string `json:"district_th"`
+	DistrictCode string `json:"district_code"`
+	DistrictType string `json:"district_type"` // "amphoe" | "khet"
+
+	// Subdistrict is the ตำบล (Tambon) — or แขวง (Khwaeng) for Bangkok's
+	// subdistricts. SubdistrictType tells you which term applies.
+	SubdistrictEN   string `json:"subdistrict_en"`
+	SubdistrictTH   string `json:"subdistrict_th"`
+	SubdistrictCode string `json:"subdistrict_code"`
+	SubdistrictType string `json:"subdistrict_type"`
+}
+
+// FindSubdistrictsIntersecting resolves an arbitrary polygon — e.g. a rider
+// shift zone or delivery area — to every subdistrict (tambon/khwaeng) whose
+// boundary it touches or overlaps. It is the many-to-many counterpart of
+// GetLocationDetail: a single point resolves to at most one subdistrict, but
+// a polygon commonly spans several.
+//
+// The result is a slice in no particular order, and an empty slice (not an
+// error) is a normal result if the polygon falls entirely outside Thailand
+// or in a gap between simplified boundaries. An error is only returned for
+// a malformed geometry (missing/unsupported Type, empty or non-numeric
+// coordinates).
+func (l *Locator) FindSubdistrictsIntersecting(geometry Geometry) ([]SubdistrictMatch, error) {
+	query, err := geometryQueryToMultiPolygon(geometry)
+	if err != nil {
+		return nil, err
+	}
+
+	matches := make([]SubdistrictMatch, 0)
+	for _, s := range l.subdistricts {
+		if !query.intersects(s.mp) {
+			continue
+		}
+		dType, sType := districtTerm(s.provinceEN)
+		matches = append(matches, SubdistrictMatch{
+			ProvinceEN:   s.provinceEN,
+			ProvinceTH:   s.provinceTH,
+			ProvinceCode: s.provinceCode,
+
+			DistrictEN:   s.districtEN,
+			DistrictTH:   s.districtTH,
+			DistrictCode: s.districtCode,
+			DistrictType: dType,
+
+			SubdistrictEN:   s.nameEN,
+			SubdistrictTH:   s.nameTH,
+			SubdistrictCode: s.code,
+			SubdistrictType: sType,
+		})
+	}
+	return matches, nil
+}
+
 // --- convenience package-level API ------------------------------------------
 
 var (
@@ -293,4 +357,14 @@ func GetLocationDetail(lat, lng float64) (*LocationDetail, error) {
 		return nil, err
 	}
 	return loc.GetLocationDetail(lat, lng)
+}
+
+// FindSubdistrictsIntersecting is a package-level convenience wrapper around
+// a lazily initialized, shared Locator. See Locator.FindSubdistrictsIntersecting.
+func FindSubdistrictsIntersecting(geometry Geometry) ([]SubdistrictMatch, error) {
+	loc, err := defaultInstance()
+	if err != nil {
+		return nil, err
+	}
+	return loc.FindSubdistrictsIntersecting(geometry)
 }
