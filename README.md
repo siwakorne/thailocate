@@ -22,7 +22,7 @@ against an official source before using this for anything legally sensitive
 ## 1. Use it as a library
 
 ```bash
-go get github.com/siwakorne/thailocate   # after you push this to your own repo
+go get github.com/siwakorne/thailocate
 ```
 
 ```go
@@ -144,13 +144,13 @@ thailocate/
 └── example/basic/         # minimal usage example
 ```
 
-## Publishing so others can `go get` it
+## Publishing your own fork
 
-Go has no central "publish" step like npm — the module proxy discovers
-packages straight from your git host. Steps:
+This repo (`github.com/siwakorne/thailocate`) is already published this way —
+tagged and `go get`-able. If you fork it under a different module path, here's
+how to publish your copy:
 
-1. **Create a public repo** on GitHub (or GitLab/etc.), e.g.
-   `github.com/siwakorne/thailocate`.
+1. **Create a public repo** on GitHub (or GitLab/etc.).
 2. **Update the module path** in `go.mod` to match that repo exactly, and
    update the two `import "github.com/siwakorne/..."` lines in
    `cmd/thailocate-server/main.go` and `example/basic/main.go` to match too.
@@ -163,9 +163,9 @@ packages straight from your git host. Steps:
    ```
 5. That's it. Anyone can now run:
    ```bash
-   go get github.com/siwakorne/thailocate@v0.1.0
+   go get github.com/you/thailocate@v0.1.0
    # or, to just run the server without cloning:
-   go install github.com/siwakorne/thailocate/cmd/thailocate-server@latest
+   go install github.com/you/thailocate/cmd/thailocate-server@latest
    ```
    The first time someone fetches it, Google's public module proxy
    (`proxy.golang.org`, the default `GOPROXY`) pulls it from GitHub, caches
@@ -178,13 +178,6 @@ A few things worth doing before/soon after your first tag:
 - **Add a `go.sum`**: not needed here since there are zero external
   dependencies, but if you add any later, commit `go.sum` too so consumers
   get reproducible, verified builds.
-- **License the code** (a `LICENSE` file is included — MIT by default, change
-  the name/year or pick a different license as you like) **and keep
-  `DATA_ATTRIBUTION.md`** — the boundary data is CC BY-IGO, which permits
-  redistribution and commercial use but requires attribution; that file
-  gives proper credit to the source (Royal Thai Survey Department / HDX /
-  ITOS / USAID). If you publish compiled binaries too, ship that file
-  alongside them.
 - **Semver matters**: once you tag `v1.0.0`+, any breaking change to the
   public API (`LocationDetail` fields, function signatures) needs a `v2`
   module path bump per Go's module rules — so it's worth living on `v0.x.y`
@@ -192,11 +185,22 @@ A few things worth doing before/soon after your first tag:
 - Optional polish: add a `pkg.go.dev` badge (it indexes automatically once
   the module is fetched at least once) and a short `CHANGELOG.md`.
 
+## License
+
+Code is MIT-licensed — see [`LICENSE`](LICENSE).
+
+The boundary data in `data/*.geojson` is **not** covered by that license: it's
+CC BY-IGO (redistribution and commercial use are fine, attribution is
+required). See [`DATA_ATTRIBUTION.md`](DATA_ATTRIBUTION.md) for the required
+credit line — keep that file alongside the code (and any compiled binaries
+that embed the data) if you redistribute this.
+
 ## Notes / limitations
 
-- Update the module path in `go.mod` (currently `github.com/siwakorne/thailocate`)
-  to your own repo before publishing, and update the import paths in
-  `cmd/thailocate-server` and `example/basic` to match.
+- If you fork this under your own module path, update `go.mod` (currently
+  `github.com/siwakorne/thailocate`) and the import paths in
+  `cmd/thailocate-server` and `example/basic` to match — see
+  [Publishing your own fork](#publishing-your-own-fork).
 - Polygons are simplified for size (~6MB of embedded data total), so results
   right on a border are approximate to a few tens of meters at worst.
 - No postal codes included. If you need them, join `SubdistrictCode`
