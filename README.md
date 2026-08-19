@@ -4,6 +4,11 @@ Resolve a WGS84 latitude/longitude to the Thai administrative area that
 contains it — province (จังหวัด), district (อำเภอ, or **เขต** inside Bangkok),
 and subdistrict (ตำบล, or **แขวง** inside Bangkok).
 
+**Live demo:** [thailocate.onrender.com](https://thailocate.onrender.com) —
+paste a Polygon/MultiPolygon GeoJSON geometry and see which subdistricts it
+covers, drawn on a map. (Free-tier hosting — the first load after a while
+may take 30-60s to wake up.)
+
 - **Boundary data is embedded in the binary** (`go:embed`) — no network
   calls, no database, no external API, at runtime.
 - **Pure standard library** — no third-party Go dependencies.
@@ -186,7 +191,8 @@ binary to a server and run it.
 
 ### Browser demo
 
-The server also serves a small demo page at `/` (e.g.
+Try it live at [thailocate.onrender.com](https://thailocate.onrender.com), or
+run it yourself — the server also serves a small demo page at `/` (e.g.
 `http://localhost:8080/`) — paste a Polygon/MultiPolygon GeoJSON geometry,
 click ค้นหา, and it calls `/v1/subdistricts-intersecting` for you, lists the
 matching subdistricts, and draws the shape on a Leaflet/OpenStreetMap map.
