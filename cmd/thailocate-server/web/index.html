@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>thailocate demo</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #6b7280;
+    --border: #e2e2e2;
+    --panel: #fafafa;
+    --accent: #2563eb;
+    --accent-fg: #ffffff;
+    --error-bg: #fef2f2;
+    --error-fg: #b91c1c;
+    --error-border: #fecaca;
+    --code-bg: #f3f4f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181d;
+      --fg: #e7e7e7;
+      --muted: #9aa0a6;
+      --border: #2c2f36;
+      --panel: #1d2026;
+      --accent: #3b82f6;
+      --accent-fg: #0b0d10;
+      --error-bg: #2a1414;
+      --error-fg: #f87171;
+      --error-border: #5b1f1f;
+      --code-bg: #111318;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    flex: 0 0 auto;
+  }
+  header h1 { font-size: 1.05rem; margin: 0; }
+  header p { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.85rem; }
+  main {
+    flex: 1 1 auto;
+    display: flex;
+    min-height: 0;
+  }
+  .panel {
+    width: 420px;
+    flex: 0 0 auto;
+    border-right: 1px solid var(--border);
+    padding: 1rem;
+    overflow-y: auto;
+    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  #map { flex: 1 1 auto; min-width: 0; }
+  label { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+  textarea {
+    width: 100%;
+    min-height: 200px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.78rem;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--code-bg);
+    color: var(--fg);
+    resize: vertical;
+  }
+  button {
+    background: var(--accent);
+    color: var(--accent-fg);
+    border: none;
+    border-radius: 6px;
+    padding: 0.55rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.6; cursor: default; }
+  button.secondary {
+    background: transparent;
+    color: var(--fg);
+    border: 1px solid var(--border);
+  }
+  .row { display: flex; gap: 0.5rem; }
+  #status { font-size: 0.82rem; }
+  #status.error {
+    background: var(--error-bg);
+    color: var(--error-fg);
+    border: 1px solid var(--error-border);
+    padding: 0.5rem 0.6rem;
+    border-radius: 6px;
+  }
+  #results { display: flex; flex-direction: column; gap: 0.4rem; }
+  .result-item {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.5rem 0.6rem;
+    font-size: 0.82rem;
+  }
+  .result-item .place { font-weight: 600; }
+  .result-item .path { color: var(--muted); font-size: 0.75rem; margin-top: 0.15rem; }
+  #count { font-size: 0.8rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>thailocate demo</h1>
+  <p>วาง GeoJSON ของ Polygon / MultiPolygon แล้วกดค้นหา เพื่อดูว่าโซนนี้ครอบคลุมเขต/แขวงใดบ้าง</p>
+</header>
+<main>
+  <div class="panel">
+    <div>
+      <label for="geo-input">GeoJSON geometry (Polygon หรือ MultiPolygon)</label>
+      <textarea id="geo-input" spellcheck="false"></textarea>
+    </div>
+    <div class="row">
+      <button id="submit-btn">ค้นหา</button>
+      <button id="example-btn" class="secondary" type="button">ใส่ตัวอย่าง</button>
+      <button id="clear-btn" class="secondary" type="button">ล้างแผนที่</button>
+    </div>
+    <div id="status"></div>
+    <div id="count"></div>
+    <div id="results"></div>
+  </div>
+  <div id="map"></div>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const EXAMPLE_GEOMETRY = {
+  type: "MultiPolygon",
+  coordinates: [
+    [[
+      [100.490, 13.720],
+      [100.540, 13.720],
+      [100.540, 13.755],
+      [100.490, 13.755],
+      [100.490, 13.720]
+    ]],
+    [[
+      [100.560, 13.730],
+      [100.600, 13.730],
+      [100.600, 13.760],
+      [100.560, 13.760],
+      [100.560, 13.730]
+    ]]
+  ]
+};
+
+const map = L.map('map').setView([13.7563, 100.5018], 6);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(map);
+
+let queryLayer = null;
+
+const input = document.getElementById('geo-input');
+const statusEl = document.getElementById('status');
+const countEl = document.getElementById('count');
+const resultsEl = document.getElementById('results');
+const submitBtn = document.getElementById('submit-btn');
+
+input.value = JSON.stringify(EXAMPLE_GEOMETRY, null, 2);
+
+document.getElementById('example-btn').addEventListener('click', () => {
+  input.value = JSON.stringify(EXAMPLE_GEOMETRY, null, 2);
+});
+
+document.getElementById('clear-btn').addEventListener('click', () => {
+  if (queryLayer) {
+    map.removeLayer(queryLayer);
+    queryLayer = null;
+  }
+  statusEl.className = '';
+  statusEl.textContent = '';
+  countEl.textContent = '';
+  resultsEl.innerHTML = '';
+});
+
+function setStatus(message, isError) {
+  statusEl.textContent = message;
+  statusEl.className = isError ? 'error' : '';
+}
+
+function renderResults(matches) {
+  resultsEl.innerHTML = '';
+  countEl.textContent = matches.length + ' เขต/แขวงที่ตรงกับพื้นที่นี้';
+  for (const m of matches) {
+    const item = document.createElement('div');
+    item.className = 'result-item';
+
+    const place = document.createElement('div');
+    place.className = 'place';
+    place.textContent = `${m.subdistrict_th} (${m.subdistrict_en})`;
+    item.appendChild(place);
+
+    const path = document.createElement('div');
+    path.className = 'path';
+    path.textContent = `${m.province_th} / ${m.district_th} — ${m.province_en} / ${m.district_en}`;
+    item.appendChild(path);
+
+    resultsEl.appendChild(item);
+  }
+}
+
+async function submitQuery() {
+  let geometry;
+  try {
+    geometry = JSON.parse(input.value);
+  } catch (e) {
+    setStatus('GeoJSON ไม่ถูกต้อง: ' + e.message, true);
+    return;
+  }
+
+  submitBtn.disabled = true;
+  setStatus('กำลังค้นหา...', false);
+  countEl.textContent = '';
+  resultsEl.innerHTML = '';
+
+  try {
+    const resp = await fetch('/v1/subdistricts-intersecting', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(geometry)
+    });
+
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({}));
+      setStatus('เกิดข้อผิดพลาด: ' + (body.error || resp.statusText), true);
+      return;
+    }
+
+    const matches = await resp.json();
+
+    if (queryLayer) {
+      map.removeLayer(queryLayer);
+      queryLayer = null;
+    }
+    queryLayer = L.geoJSON(geometry, {
+      style: { color: '#2563eb', weight: 2, fillOpacity: 0.15 }
+    }).addTo(map);
+    const bounds = queryLayer.getBounds();
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [24, 24] });
+    }
+
+    setStatus('', false);
+    renderResults(matches);
+  } catch (e) {
+    setStatus('เรียก API ไม่สำเร็จ: ' + e.message, true);
+  } finally {
+    submitBtn.disabled = false;
+  }
+}
+
+submitBtn.addEventListener('click', submitQuery);
+</script>
+</body>
+</html>

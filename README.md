@@ -184,6 +184,36 @@ Build a standalone binary with `go build -o thailocate-server ./cmd/thailocate-s
 it's fully self-contained (data is embedded), so you can just copy the one
 binary to a server and run it.
 
+### Browser demo
+
+The server also serves a small demo page at `/` (e.g.
+`http://localhost:8080/`) — paste a Polygon/MultiPolygon GeoJSON geometry,
+click ค้นหา, and it calls `/v1/subdistricts-intersecting` for you, lists the
+matching subdistricts, and draws the shape on a Leaflet/OpenStreetMap map.
+The page is embedded in the binary (`cmd/thailocate-server/web/index.html`)
+same as the boundary data, so no separate deploy step is needed — it only
+needs the tile/JS CDN reachable in the browser, not the server itself.
+
+### Deploying for free (e.g. so QA can test without running it locally)
+
+A [`render.yaml`](render.yaml) blueprint is included for [Render](https://render.com)'s
+free tier:
+
+1. Push this repo to GitHub (already done if you're reading this from there).
+2. On Render, **New → Blueprint**, point it at the repo. It reads
+   `render.yaml` and sets up the build/start commands automatically.
+3. Deploy. Render assigns a public URL like `https://thailocate-server.onrender.com` —
+   send that to your QA tester; the demo page is at the root URL.
+
+The server reads the listen port from the `$PORT` env var if `-addr` isn't
+passed, which is what Render (and most other free hosts — Cloud Run, Fly.io,
+Koyeb, Railway) inject automatically, so the same binary deploys anywhere
+without extra config.
+
+Free tier note: the service spins down after ~15 minutes of inactivity and
+takes 30-60s to wake back up on the next request — expected for a demo/QA
+link, not meant for production traffic.
+
 ## How it works
 
 1. Boundary polygons (province / district / subdistrict, `data/*.geojson`)

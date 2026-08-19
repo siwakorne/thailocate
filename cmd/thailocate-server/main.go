@@ -5,27 +5,48 @@
 package main
 
 import (
+	"embed"
 	"encoding/json"
 	"flag"
+	"io/fs"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
 	"github.com/siwakorne/thailocate"
 )
 
+//go:embed web
+var webFS embed.FS
+
 func main() {
-	addr := flag.String("addr", ":8080", "listen address")
+	addr := flag.String("addr", "", "listen address (defaults to $PORT if set, else :8080)")
 	flag.Parse()
+
+	listenAddr := *addr
+	if listenAddr == "" {
+		if port := os.Getenv("PORT"); port != "" {
+			listenAddr = ":" + port
+		} else {
+			listenAddr = ":8080"
+		}
+	}
 
 	loc, err := thailocate.New()
 	if err != nil {
 		log.Fatalf("failed to load boundary data: %v", err)
 	}
-	log.Println("boundary data loaded, starting server on", *addr)
+	log.Println("boundary data loaded, starting server on", listenAddr)
 
 	mux := http.NewServeMux()
+
+	webRoot, err := fs.Sub(webFS, "web")
+	if err != nil {
+		log.Fatalf("failed to load embedded web assets: %v", err)
+	}
+	mux.Handle("/", http.FileServer(http.FS(webRoot)))
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -96,7 +117,7 @@ func main() {
 	})
 
 	srv := &http.Server{
-		Addr:         *addr,
+		Addr:         listenAddr,
 		Handler:      logRequests(mux),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,

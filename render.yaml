@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: thailocate-server
+    runtime: go
+    plan: free
+    buildCommand: go build -o thailocate-server ./cmd/thailocate-server
+    startCommand: ./thailocate-server
+    healthCheckPath: /healthz
+    envVars:
+      - key: CGO_ENABLED
+        value: "0"
