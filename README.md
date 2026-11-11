@@ -1,5 +1,16 @@
 # thailocate
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/siwakorne/thailocate.svg)](https://pkg.go.dev/github.com/siwakorne/thailocate)
+[![Go Report Card](https://goreportcard.com/badge/github.com/siwakorne/thailocate)](https://goreportcard.com/report/github.com/siwakorne/thailocate)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+> **ภาษาไทย:** ไลบรารี Go สำหรับ **หาจังหวัด อำเภอ ตำบล จากพิกัด**
+> (latitude/longitude) แบบออฟไลน์ — reverse geocoding ประเทศไทย
+> ครบ 77 จังหวัด 928 อำเภอ/เขต 7,425 ตำบล/แขวง ข้อมูลขอบเขตฝังอยู่ในไบนารี
+> ไม่ต้องเรียก API ภายนอก ไม่ต้องใช้ฐานข้อมูล ใช้ได้ทั้งแบบ import เป็นไลบรารี
+> หรือรันเป็น HTTP server และยังหาได้ว่า polygon (GeoJSON) หนึ่งครอบคลุมตำบล/แขวงไหนบ้าง
+> ลองได้ที่ [thailocate.onrender.com](https://thailocate.onrender.com)
+
 Resolve a WGS84 latitude/longitude to the Thai administrative area that
 contains it — province (จังหวัด), district (อำเภอ, or **เขต** inside Bangkok),
 and subdistrict (ตำบล, or **แขวง** inside Bangkok).
