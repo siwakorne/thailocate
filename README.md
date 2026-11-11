@@ -1,7 +1,6 @@
 # thailocate
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/siwakorne/thailocate.svg)](https://pkg.go.dev/github.com/siwakorne/thailocate)
-[![Go Report Card](https://goreportcard.com/badge/github.com/siwakorne/thailocate)](https://goreportcard.com/report/github.com/siwakorne/thailocate)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > **ภาษาไทย:** ไลบรารี Go สำหรับ **หาจังหวัด อำเภอ ตำบล จากพิกัด**
